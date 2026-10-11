@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Home Mini</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#E8EDEF; --card:#FFFFFF; --ink:#12232B; --mute:#5B6E76; --line:#D5DDE1; --soft:#F3F6F7;
+  --heat:#E0652B; --blue:#2B6CB0; --amber:#D99100; --green:#1B8A5A; --red:#D6381F;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:var(--ink);color:#fff;transition:background .3s}
+body.alarm .bar{background:var(--red)}
+.bar h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.12);font-size:14px}
+.chip i{width:9px;height:9px;border-radius:50%;background:#98A6AD}
+.chip.ok i{background:#4ADE9B}
+.chip.bad i{background:#FF8A75}
+
+.alarmbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:#FBE4DF;color:#7A1D0E;border-bottom:1px solid #F0B8AD}
+.alarmbar[hidden]{display:none}
+.alarmbar strong{font-weight:700}
+.btn{border:0;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--red);color:#fff}
+
+main{max-width:1120px;margin:0 auto;padding:20px;display:grid;gap:16px;grid-template-columns:1fr}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+.card h2{margin:0 0 4px;font-size:15px;font-weight:500;color:var(--mute)}
+
+.hero .big{display:flex;align-items:baseline;gap:6px}
+.hero .num{font-size:clamp(60px,10vw,104px);line-height:1;font-weight:700;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--heat)}
+.hero .unit{font-size:28px;font-weight:500;color:var(--mute)}
+.hero .state{margin:6px 0 16px;font-weight:500}
+.chartbox{position:relative;height:230px}
+
+.side{display:grid;gap:16px;align-content:start}
+.read .v{font-size:36px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.read .v small{font-size:16px;font-weight:500;color:var(--mute);margin-left:4px}
+.read .sub{color:var(--mute);font-size:14px}
+.meter{height:8px;border-radius:99px;background:var(--soft);margin-top:10px;overflow:hidden}
+.meter span{display:block;height:100%;width:0;border-radius:99px;transition:width .4s}
+#humBar{background:var(--blue)}
+#luxBar{background:var(--amber)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#B9C4C9;margin-right:8px}
+.dot.on{background:var(--red)}
+
+.ctrl{display:grid;gap:18px;margin-top:8px}
+.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.row .name{font-weight:700}
+.pill{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:99px;background:var(--soft);color:var(--mute);font-size:13px;font-weight:500}
+.pill.on{background:#FCEFC9;color:#6B4800}
+.pill.fan.on{background:#D9E8F8;color:#173F6E}
+.seg{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+.seg button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font-weight:500;color:var(--mute);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.step{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:14px}
+.step button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer}
+.step b{color:var(--ink);font-variant-numeric:tabular-nums}
+body.offline .ctrl{opacity:.45;pointer-events:none}
+
+.log{list-style:none;margin:8px 0 0;padding:0;max-height:300px;overflow:auto}
+.log li{display:flex;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.log li:first-child{border-top:0}
+.log time{flex:none;color:var(--mute);font-variant-numeric:tabular-nums}
+.log .empty{color:var(--mute)}
+.log li.alert{color:var(--red);font-weight:700}
+
+@media (min-width:880px){
+  main{grid-template-columns:repeat(12,1fr)}
+  .hero{grid-column:span 8}
+  .side{grid-column:span 4}
+  .controls{grid-column:span 7}
+  .logcard{grid-column:span 5}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body class="offline">
+
+<header class="bar">
+  <h1>Smart Home Mini</h1>
+  <div class="chips">
+    <span class="chip" id="chipBroker"><i></i><span>Broker: menghubungkan</span></span>
+    <span class="chip" id="chipDevice"><i></i><span>ESP32: menunggu data</span></span>
+  </div>
+</header>
+
+<div class="alarmbar" id="alarmBar" hidden>
+  <span><strong>Alarm aktif.</strong> Sensor gerak mendeteksi pergerakan saat mode Pergi.</span>
+  <button class="btn" data-cmd="mode" data-val="home">Matikan alarm</button>
+</div>
+
+<main>
+  <section class="card hero">
+    <h2>Suhu ruangan</h2>
+    <div class="big"><span class="num" id="temp">--.-</span><span class="unit">°C</span></div>
+    <p class="state" id="stateText">Menunggu data dari perangkat</p>
+    <div class="chartbox"><canvas id="chart" aria-label="Grafik suhu dan kelembapan"></canvas></div>
+  </section>
+
+  <div class="side">
+    <section class="card read">
+      <h2>Kelembapan</h2>
+      <div class="v"><span id="hum">--</span><small>%</small></div>
+      <div class="meter"><span id="humBar"></span></div>
+    </section>
+    <section class="card read">
+      <h2>Cahaya</h2>
+      <div class="v"><span id="lux">--</span><small>lux</small></div>
+      <div class="sub" id="luxLabel">-</div>
+      <div class="meter"><span id="luxBar"></span></div>
+    </section>
+    <section class="card read">
+      <h2>Sensor gerak</h2>
+      <div class="v" style="font-size:20px"><span class="dot" id="motionDot"></span><span id="motionText">-</span></div>
+    </section>
+  </div>
+
+  <section class="card controls">
+    <h2>Kontrol</h2>
+    <div class="ctrl">
+      <div class="row">
+        <span class="name">Keamanan</span>
+        <div class="seg" role="group" aria-label="Mode keamanan">
+          <button data-cmd="mode" data-val="home" aria-pressed="false">Di rumah</button>
+          <button data-cmd="mode" data-val="away" aria-pressed="false">Pergi</button>
+        </div>
+      </div>
+      <div class="row">
+        <span><span class="name">Lampu</span><span class="pill" id="lampState">-</span></span>
+        <div class="seg" role="group" aria-label="Mode lampu">
+          <button data-cmd="lamp" data-val="auto" aria-pressed="false">Otomatis</button>
+          <button data-cmd="lamp" data-val="on" aria-pressed="false">Nyala</button>
+          <button data-cmd="lamp" data-val="off" aria-pressed="false">Mati</button>
+        </div>
+      </div>
+      <div class="row">
+        <span><span class="name">Kipas</span><span class="pill fan" id="fanState">-</span></span>
+        <div class="seg" role="group" aria-label="Mode kipas">
+          <button data-cmd="fan" data-val="auto" aria-pressed="false">Otomatis</button>
+          <button data-cmd="fan" data-val="on" aria-pressed="false">Nyala</button>
+          <button data-cmd="fan" data-val="off" aria-pressed="false">Mati</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="step">Kipas otomatis menyala di suhu
+          <button id="thDown" aria-label="Turunkan ambang suhu">−</button>
+          <b id="fanTh">30</b> °C
+          <button id="thUp" aria-label="Naikkan ambang suhu">+</button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card logcard">
+    <h2>Log kejadian</h2>
+    <ul class="log" id="log"><li class="empty">Menunggu kejadian dari perangkat…</li></ul>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// GANTI: harus SAMA dengan #define BASE di sketch.ino
+const BASE = 'smarthome/ibnu-asidik-7421';
+
+const T = { data: BASE + '/data', status: BASE + '/status', event: BASE + '/event', cmd: s => BASE + '/cmd/' + s };
+const $ = id => document.getElementById(id);
+const STATE_TEXT = { home: 'Di rumah, keamanan nonaktif', arming: 'Mengaktifkan keamanan…', away: 'Pergi, keamanan siaga', alarm: 'ALARM: gerakan terdeteksi' };
+
+let statusOnline = null, lastData = 0, brokerOk = false, currentTh = 30;
+
+/* ---------- Grafik ---------- */
+const MAXPTS = 60;
+const chart = new Chart($('chart'), {
+  type: 'line',
+  data: { labels: [], datasets: [
+    { label: 'Suhu (°C)', data: [], borderColor: '#E0652B', borderWidth: 2, tension: .3, pointRadius: 0, yAxisID: 'y' },
+    { label: 'Kelembapan (%)', data: [], borderColor: '#2B6CB0', borderWidth: 2, tension: .3, pointRadius: 0, yAxisID: 'y1' }
+  ]},
+  options: {
+    animation: false, responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#5B6E76' } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 6, color: '#5B6E76' } },
+      y: { position: 'left', ticks: { color: '#E0652B' }, grid: { color: '#E6ECEE' } },
+      y1: { position: 'right', ticks: { color: '#2B6CB0' }, grid: { drawOnChartArea: false } }
+    }
+  }
+});
+function pushChart(d) {
+  if (d.temp == null && d.hum == null) return;
+  const c = chart.data;
+  c.labels.push(clock());
+  c.datasets[0].data.push(d.temp);
+  c.datasets[1].data.push(d.hum);
+  if (c.labels.length > MAXPTS) { c.labels.shift(); c.datasets.forEach(s => s.data.shift()); }
+  chart.update();
+}
+
+/* ---------- Tampilan ---------- */
+function clock() { return new Date().toLocaleTimeString('id-ID', { hour12: false }); }
+function luxLabel(l) { return l < 100 ? 'Gelap' : l < 1000 ? 'Redup' : 'Terang'; }
+function setSeg(cmd, val) {
+  document.querySelectorAll('.seg [data-cmd="' + cmd + '"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.val === val));
+}
+function setPill(el, on) { el.textContent = on ? 'Menyala' : 'Mati'; el.classList.toggle('on', on); }
+
+function render(d) {
+  $('temp').textContent = d.temp == null ? '--.-' : d.temp.toFixed(1);
+  $('hum').textContent = d.hum == null ? '--' : Math.round(d.hum);
+  $('humBar').style.width = (d.hum || 0) + '%';
+  $('lux').textContent = d.lux;
+  $('luxLabel').textContent = luxLabel(d.lux);
+  $('luxBar').style.width = Math.min(100, Math.log10(d.lux + 1) / 5 * 100) + '%';
+  $('motionDot').classList.toggle('on', !!d.motion);
+  $('motionText').textContent = d.motion ? 'Gerakan terdeteksi' : 'Tidak ada gerakan';
+  setPill($('lampState'), !!d.lamp);
+  setPill($('fanState'), !!d.fan);
+  setSeg('lamp', d.lampMode);
+  setSeg('fan', d.fanMode);
+  setSeg('mode', d.state === 'home' ? 'home' : 'away');
+  currentTh = d.fanTh;
+  $('fanTh').textContent = d.fanTh;
+  $('stateText').textContent = STATE_TEXT[d.state] || d.state;
+  document.body.classList.toggle('alarm', d.state === 'alarm');
+  $('alarmBar').hidden = d.state !== 'alarm';
+}
+
+function addLog(text) {
+  const ul = $('log');
+  const empty = ul.querySelector('.empty');
+  if (empty) empty.remove();
+  const li = document.createElement('li');
+  if (text.startsWith('ALARM')) li.className = 'alert';
+  const t = document.createElement('time'); t.textContent = clock();
+  const s = document.createElement('span'); s.textContent = text;
+  li.append(t, s);
+  ul.prepend(li);
+  while (ul.children.length > 40) ul.lastChild.remove();
+}
+
+function refreshChips() {
+  const fresh = Date.now() - lastData < 8000;
+  const online = statusOnline !== false && fresh;
+  const b = $('chipBroker'), d = $('chipDevice');
+  b.className = 'chip ' + (brokerOk ? 'ok' : 'bad');
+  b.lastElementChild.textContent = brokerOk ? 'Broker: terhubung' : 'Broker: terputus';
+  d.className = 'chip ' + (online ? 'ok' : 'bad');
+  d.lastElementChild.textContent = online ? 'ESP32: online' : (lastData ? 'ESP32: tidak merespons' : 'ESP32: menunggu data');
+  document.body.classList.toggle('offline', !(brokerOk && online));
+}
+setInterval(refreshChips, 1000);
+
+/* ---------- MQTT ---------- */
+const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+  clientId: 'dash-' + Math.random().toString(16).slice(2, 10),
+  reconnectPeriod: 3000
+});
+client.on('connect', () => { brokerOk = true; client.subscribe([T.data, T.status, T.event]); refreshChips(); });
+client.on('close', () => { brokerOk = false; refreshChips(); });
+client.on('error', e => console.error('MQTT error:', e));
+client.on('message', (topic, payload) => {
+  const msg = payload.toString();
+  if (topic === T.data) {
+    try {
+      const d = JSON.parse(msg);
+      lastData = Date.now();
+      render(d); pushChart(d); refreshChips();
+    } catch (e) { console.error('JSON tidak valid:', msg); }
+  } else if (topic === T.status) {
+    statusOnline = msg === 'online';
+    if (!statusOnline) addLog('Perangkat ESP32 terputus');
+    refreshChips();
+  } else if (topic === T.event) {
+    addLog(msg);
+  }
+});
+
+function send(sub, val) { if (client.connected) client.publish(T.cmd(sub), String(val)); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-cmd]');
+  if (b) send(b.dataset.cmd, b.dataset.val);
+});
+$('thUp').addEventListener('click', () => send('fan_th', Math.min(40, currentTh + 1)));
+$('thDown').addEventListener('click', () => send('fan_th', Math.max(20, currentTh - 1)));
+refreshChips();
+</script>
+</body>
+</html>
