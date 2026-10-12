@@ -251,7 +251,7 @@ function addLog(text) {
 }
 
 function refreshChips() {
-  const fresh = Date.now() - lastData < 8000;
+  const fresh = Date.now() - lastData < 15000;
   const online = statusOnline !== false && fresh;
   const b = $('chipBroker'), d = $('chipDevice');
   b.className = 'chip ' + (brokerOk ? 'ok' : 'bad');
